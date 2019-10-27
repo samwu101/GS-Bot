@@ -19,7 +19,7 @@ slack_signing_secret = '44859eaa96cc7e60035d2592136cd3a4'
 slack_events_adapter = SlackEventAdapter(slack_signing_secret, "/slack/events")
 
 # Create a SlackClient for the bot to use for Web API requests
-slack_bot_token = 'xoxb-810243636740-799237632115-hZNnpuDP3bazxCcdNzs2E1DT'
+slack_bot_token = 'xoxb-810243636740-799237632115-OvDWjd1vXiWvN7g91bztET0P'
 slack_client = SlackClient(slack_bot_token)
 
 # global string for remember the last response
@@ -33,17 +33,9 @@ num_rows = 5
 
 # Auth details for GS
 client_id = '64019d2ee21e4a04b6722c5ee4f3bd7d'
-client_secret = '47be0ae6b8abccd5fc5f30ba189bae1f9a23e4e99d2de6846b47a4a10b8e1c20'
+client_secret = '2d4b5d81d3b7b114f90cf0462bedc581c119242a53240afbb080b09fd3bd1f40'
 
-# Login to Marquee
-scopes = GsSession.Scopes.get_default()
-GsSession.use(client_id=client_id, client_secret=client_secret, scopes=scopes)
 
-# retrieve data
-# ds = Dataset('USCANFPP_MINI')
-
-# get a list of covered GSIDs
-# gsids = ds.get_coverage()['gsid'].values.tolist()
 
 # function for generating table png
 def render_mpl_table(dataf, num_rows=5 ,col_width=3.0, row_height=0.625, font_size=14,
@@ -79,6 +71,14 @@ def handle_mention(event_data):
     message = event_data["event"]
     text_l = message.get('text').lower()
     channel = message["channel"]
+    # Login to Marquee
+    scopes = GsSession.Scopes.get_default()
+    GsSession.use(client_id=client_id, client_secret=client_secret, scopes=scopes)
+    # retrieve data
+    ds = Dataset('USCANFPP_MINI')
+
+    # get a list of covered GSIDs
+    gsids = ds.get_coverage()['gsid'].values.tolist()
     if message.get("subtype") is None:
         if "hi" in text_l or "hello" in text_l:
             user_info = requests.get("https://slack.com/api/users.info?token=" + slack_bot_token + "&user=" + message["user"] + "&pretty=1").json()
@@ -100,33 +100,38 @@ def handle_mention(event_data):
                 for i in range(2):
                     pair[i] = pair[i].strip()
                 if "gsid" not in section:
+                    if "start date" in pair[0]:
+                        pair[0] = "start date"
                     text_dict[pair[0]] = [int(num) for num in pair[1].split('/')]
                 else:
                     text_dict[pair[0]] = int(pair[1])
+            print("!!!:", text_dict)
             data = ds.get_data(date(text_dict["start date"][2], text_dict["start date"][0], text_dict["start date"][1]),
                                date(text_dict["end date"][2], text_dict["end date"][0], text_dict["end date"][1]),
                                gsid=gsids[0:text_dict["gsid"]])
-            response = "I've prepared a table image for you. How many rows would you like?"
+            response = "I've prepared a table image for you. It has " + str(len(data)) + " rows since it corresponds to that many days. Which row would you like to see? If multiple rows please type \"multiple rows: start_row end_row\"."
             slack_client.api_call("chat.postMessage", channel=channel, text=response)
+        elif "multiple rows" in text_l:
+            start_row = int(text_l.split(' ')[3].strip())
+            end_row = int(text_l.split(' ')[4].strip())
+            try:
+                #barc = data.plot.bar(x=0, y=y_index, rot=0)
+                #barc.get_figure().savefig("barchart.png")
+                #slack_client.api_call("files.upload", channel=channel, file="barchart.png")
+                response = str(data.loc[start_row:end_row, :].to_dict())
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            except Exception as e:
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the image for you. Make sure the number of rows is appropriate!")
         elif "row" in text_l:
-            num_rows = int(text_l.split(' ')[0].strip())
+            num_row = int(text_l.split(' ')[2].strip())
             try:
-                render_mpl_table(data, num_rows=num_rows, header_columns=0, col_width=2.0).get_figure().savefig("table.png")
-                slack_client.api_call("files.upload", channel=channel, file="table.png")
-                slack_client.api_call("chat.postMessage", channel=channel, text="Would you like to plot this table as a bar chart? \
-                                        Type \"bar chart: y_vals\" if yes, where y_vals is the position of the numerical data.")
+                #render_mpl_table(data, num_rows=num_rows, header_columns=0, col_width=2.0).get_figure().savefig("table.png")
+                #slack_client.api_call("files.upload", channel=channel, file="table.png")
+                response = str(data.iloc[num_row].to_dict())
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
             except Exception as e:
-                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the image for you. \
-                                        Make sure the number of rows is appropriate!")
-        elif "bar chart" in text_l:
-            y_index = int(text_l.split(':')[1].strip())
-            try:
-                barc = data.plot.bar(x=0, y=y_index, rot=0)
-                barc.get_figure().savefig("barchart.png")
-                slack_client.api_call("files.upload", channel=channel, file="barchart.png")
-            except Exception as e:
-                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the image for you. \
-                                        Make sure you specified a column of numerical data!")
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the row for you. Make sure the row number is appropriate!")
+        
 
 
             
