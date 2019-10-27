@@ -1,0 +1,107 @@
+Metadata-Version: 2.1
+Name: gs-quant
+Version: 0.8.50
+Summary: Goldman Sachs Quant
+Home-page: https://marquee.gs.com
+Author: Goldman Sachs
+Author-email: developer@gs.com
+License: http://www.apache.org/licenses/LICENSE-2.0
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Operating System :: OS Independent
+Classifier: License :: OSI Approved :: Apache Software License
+Description-Content-Type: text/markdown
+Requires-Dist: backoff
+Requires-Dist: cachetools
+Requires-Dist: configparser
+Requires-Dist: funcsigs
+Requires-Dist: future
+Requires-Dist: inflection
+Requires-Dist: msgpack
+Requires-Dist: pandas
+Requires-Dist: python-dateutil (>=2.7.0)
+Requires-Dist: requests
+Requires-Dist: scipy
+Requires-Dist: six
+Requires-Dist: typing ; python_version < "3.7"
+Provides-Extra: develop
+Requires-Dist: wheel ; extra == 'develop'
+Requires-Dist: sphinx ; extra == 'develop'
+Requires-Dist: sphinx-rtd-theme ; extra == 'develop'
+Requires-Dist: sphinx-autodoc-typehints ; extra == 'develop'
+Requires-Dist: pytest ; extra == 'develop'
+Requires-Dist: pytest-cov ; extra == 'develop'
+Requires-Dist: pytest-mock ; extra == 'develop'
+Requires-Dist: testfixtures ; extra == 'develop'
+Provides-Extra: internal
+Requires-Dist: gs-quant-internal ; extra == 'internal'
+Requires-Dist: requests-kerberos ; extra == 'internal'
+Provides-Extra: notebook
+Requires-Dist: jupyter ; extra == 'notebook'
+Requires-Dist: matplotlib (~=2.1.0) ; extra == 'notebook'
+Requires-Dist: pprint ; extra == 'notebook'
+Provides-Extra: test
+Requires-Dist: pytest ; extra == 'test'
+Requires-Dist: pytest-cov ; extra == 'test'
+Requires-Dist: pytest-mock ; extra == 'test'
+Requires-Dist: testfixtures ; extra == 'test'
+
+# GS Quant
+
+**GS Quant** is a python toolkit for quantitative finance, which provides access to an extensive set of derivatives pricing data through the Goldman Sachs Marquee developer APIs. Libraries are provided for timeseries analytics, portfolio manipulation, risk and scenario analytics and backtesting. Can be used to interact with the Marquee platform programmatically, or as a standalone software package for quantitiative analytics.
+
+Created and maintained by quantitative developers (quants) at Goldman Sachs to enable development of trading strategies and analysis of derivative products. Can be used to facilitate derivative structuring and trading, or as statistical packages for a variety of timeseries analytics applications.
+
+See also Getting Started notebook in the gs_quant folder or package.
+
+## Installation
+pip install gs-quant
+
+GS users: pip install gs-quant[internal] --user
+
+## Dependencies
+
+Python 3.6 or 3.7 \
+Package dependencies can be installed by pip. 
+
+## Example
+```python
+import datetime
+import numpy as np
+import pandas as pd
+from gs_quant.data import Dataset
+from gs_quant.instrument import IRSwap
+from gs_quant.common import Currency, PayReceive
+import gs_quant.risk as risk
+from gs_quant.session import Environment, GsSession
+from gs_quant.timeseries import volatility
+
+# N.b., GsSession.use(Environment.PROD, <client_id>, <client_secret>, scopes=('read_product_data','run_analytics')) will set the default session
+
+with GsSession.get(Environment.PROD, <client_id>, <client_secret>, scopes=('read_product_data','run_analytics')):
+    # get coverage for a dataset; run a query
+    weather = Dataset('WEATHER')
+    coverage = weather.get_coverage() # GS-specific functionality
+    df = weather.get_data(datetime.date(2016, 1, 15), datetime.date(2016, 1, 16), city=['Boston', 'Austin'])
+
+    # calculate vol for a time series
+    range = pd.date_range('1/1/2005', periods=3650, freq='D')
+    series = pd.Series(np.random.rand(len(range)), index=range)  # randomly generated
+    vol = volatility(series, 252)
+    vol.plot()  # requires matplotlib
+
+    # Non-GS users: the below functionality requires extra permissions
+    # Please contact your sales coverage to request access
+
+    # price an interest rates swap and compute its bucketed delta
+    irs = IRSwap(PayReceive.Pay, "5y", Currency.USD, fixedRate=0.0275)
+    pv = irs.price()
+    ir_delta = irs.calc(risk.IRDelta)
+```
+
+## Help
+Write to our distribution list: developer@gs.com
+
+
