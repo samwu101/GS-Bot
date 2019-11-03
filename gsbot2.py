@@ -19,7 +19,7 @@ slack_signing_secret = '44859eaa96cc7e60035d2592136cd3a4'
 slack_events_adapter = SlackEventAdapter(slack_signing_secret, "/slack/events")
 
 # Create a SlackClient for the bot to use for Web API requests
-slack_bot_token = 'xoxb-810243636740-799237632115-OvDWjd1vXiWvN7g91bztET0P'
+slack_bot_token = 'xoxb-810243636740-799237632115-bTfhaplbXKQJlhru4vcTuAob'
 slack_client = SlackClient(slack_bot_token)
 
 # global string for remember the last response
@@ -81,10 +81,13 @@ def handle_mention(event_data):
     gsids = ds.get_coverage()['gsid'].values.tolist()
     if message.get("subtype") is None:
         if "hi" in text_l or "hello" in text_l:
-            user_info = requests.get("https://slack.com/api/users.info?token=" + slack_bot_token + "&user=" + message["user"] + "&pretty=1").json()
-            user_profile = user_info["user"]["profile"]
-            user_first_name = user_profile["first_name"]
-            response = "Hello, " + user_first_name + ", how are you doing?"
+            #user_info = requests.get("https://slack.com/api/users.info?token=" + slack_bot_token + "&user=" + message["user"] + "&pretty=1").json()
+            #user_profile = user_info["user"]["profile"]
+            #user_first_name = user_profile["first_name"]
+            response = "Hello, " + "Sam" + ", how are you doing?"
+            slack_client.api_call("chat.postMessage", channel=channel, text=response)
+        elif "fine" in text_l:
+            response = "That's good."
             slack_client.api_call("chat.postMessage", channel=channel, text=response)
         elif "how about you" in text_l:
             response = "I'm good."
@@ -93,24 +96,27 @@ def handle_mention(event_data):
             response = "I said: \"" + response + "\""
             slack_client.api_call("chat.postMessage", channel=channel, text=response)
         elif "start date" in text_l and "end date" in text_l and "gsid" in text_l:
-            text_list = text_l.split(',')
-            text_dict = {}
-            for section in text_list:
-                pair = section.split(':')
-                for i in range(2):
-                    pair[i] = pair[i].strip()
-                if "gsid" not in section:
-                    if "start date" in pair[0]:
-                        pair[0] = "start date"
-                    text_dict[pair[0]] = [int(num) for num in pair[1].split('/')]
-                else:
-                    text_dict[pair[0]] = int(pair[1])
-            print("!!!:", text_dict)
-            data = ds.get_data(date(text_dict["start date"][2], text_dict["start date"][0], text_dict["start date"][1]),
-                               date(text_dict["end date"][2], text_dict["end date"][0], text_dict["end date"][1]),
-                               gsid=gsids[0:text_dict["gsid"]])
-            response = "I've prepared a table image for you. It has " + str(len(data)) + " rows since it corresponds to that many days. Which row would you like to see? If multiple rows please type \"multiple rows: start_row end_row\"."
-            slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            try:
+                text_list = text_l.split(',')
+                text_dict = {}
+                for section in text_list:
+                    pair = section.split(':')
+                    for i in range(2):
+                        pair[i] = pair[i].strip()
+                    if "gsid" not in section:
+                        if "start date" in pair[0]:
+                            pair[0] = "start date"
+                        text_dict[pair[0]] = [int(num) for num in pair[1].split('/')]
+                    else:
+                        text_dict[pair[0]] = int(pair[1])
+                # print("!!!:", text_dict)
+                data = ds.get_data(date(text_dict["start date"][2], text_dict["start date"][0], text_dict["start date"][1]),
+                                date(text_dict["end date"][2], text_dict["end date"][0], text_dict["end date"][1]),
+                                gsid=gsids[0:text_dict["gsid"]])
+                response = "I've prepared a table for you. It has " + str(len(data)) + " rows since it corresponds to that many days. Which row would you like to see? If multiple rows please type \"multiple rows: start_row end_row\". Note that the table shows up as a dictionary where each key is a column."
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            except Exception as e:
+                slack_client.api_call("chat.postMessage", channel=channel, text="Please format your query correctly!")
         elif "multiple rows" in text_l:
             start_row = int(text_l.split(' ')[3].strip())
             end_row = int(text_l.split(' ')[4].strip())
@@ -118,10 +124,10 @@ def handle_mention(event_data):
                 #barc = data.plot.bar(x=0, y=y_index, rot=0)
                 #barc.get_figure().savefig("barchart.png")
                 #slack_client.api_call("files.upload", channel=channel, file="barchart.png")
-                response = str(data.loc[start_row:end_row, :].to_dict())
+                response = str(data.iloc[start_row:end_row, :].to_dict())
                 slack_client.api_call("chat.postMessage", channel=channel, text=response)
             except Exception as e:
-                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the image for you. Make sure the number of rows is appropriate!")
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the rows for you. Make sure the number of rows is appropriate!")
         elif "row" in text_l:
             num_row = int(text_l.split(' ')[2].strip())
             try:
@@ -131,6 +137,33 @@ def handle_mention(event_data):
                 slack_client.api_call("chat.postMessage", channel=channel, text=response)
             except Exception as e:
                 slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the row for you. Make sure the row number is appropriate!")
+        elif "gsid" in text_l and "only" in text_l:
+            try:
+                gsid_num = text_l.split(' ')[3].strip()
+                response = str(data[data['gsid'] == gsid_num].to_dict())
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            except Exception as e:
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the table for you. Make sure the gsid exists in the table you requested!")
+        elif "max integratedScore for gsid ==" in text_l:
+            try:
+                gsid_num = text_l.split(' ')[6].strip()
+            #print("!!!: \n", gsid_num)
+                max_pos = np.argmax(list(data[data['gsid'] == gsid_num]['integratedScore']))
+                response = str(data.iloc[max_pos]['integratedScore'])
+            #print("!!!: \n", response)
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            except Exception as e:
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the integratedScore for you. Take a look at your previously requested table!")
+        elif "gsid of max integratedScore" in text_l:
+            try:
+                max_pos = np.argmax(list(data['integratedScore']))
+                response = str(data.iloc[max_pos]['gsid'])
+            #print("!!: \n", response)
+                slack_client.api_call("chat.postMessage", channel=channel, text=response)
+            except Exception as e:
+                slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the gsid for you. Take a look at your previously requested table!")
+        
+
         
 
 
