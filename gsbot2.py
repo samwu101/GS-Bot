@@ -109,7 +109,6 @@ def handle_mention(event_data):
                         text_dict[pair[0]] = [int(num) for num in pair[1].split('/')]
                     else:
                         text_dict[pair[0]] = int(pair[1])
-                # print("!!!:", text_dict)
                 data = ds.get_data(date(text_dict["start date"][2], text_dict["start date"][0], text_dict["start date"][1]),
                                 date(text_dict["end date"][2], text_dict["end date"][0], text_dict["end date"][1]),
                                 gsid=gsids[0:text_dict["gsid"]])
@@ -147,10 +146,8 @@ def handle_mention(event_data):
         elif "max integratedScore for gsid ==" in text_l:
             try:
                 gsid_num = text_l.split(' ')[6].strip()
-            #print("!!!: \n", gsid_num)
                 max_pos = np.argmax(list(data[data['gsid'] == gsid_num]['integratedScore']))
                 response = str(data.iloc[max_pos]['integratedScore'])
-            #print("!!!: \n", response)
                 slack_client.api_call("chat.postMessage", channel=channel, text=response)
             except Exception as e:
                 slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the integratedScore for you. Take a look at your previously requested table!")
@@ -158,16 +155,9 @@ def handle_mention(event_data):
             try:
                 max_pos = np.argmax(list(data['integratedScore']))
                 response = str(data.iloc[max_pos]['gsid'])
-            #print("!!: \n", response)
                 slack_client.api_call("chat.postMessage", channel=channel, text=response)
             except Exception as e:
                 slack_client.api_call("chat.postMessage", channel=channel, text="Whoops! I can't generate the gsid for you. Take a look at your previously requested table!")
-        
-
-        
-
-
-            
 
 
 @slack_events_adapter.on("app_home_opened")
