@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 import six
 
 # Our app's Slack Event Adapter for receiving actions via the Events API
-slack_signing_secret = '44859eaa96cc7e60035d2592136cd3a4'
+slack_signing_secret = 'SIGNING SECRET HERE'
 slack_events_adapter = SlackEventAdapter(slack_signing_secret, "/slack/events")
 
 # Create a SlackClient for the bot to use for Web API requests
-slack_bot_token = 'xoxb-810243636740-799237632115-bTfhaplbXKQJlhru4vcTuAob'
+slack_bot_token = 'BOT TOKEN HERE'
 slack_client = SlackClient(slack_bot_token)
 
 # global string for remember the last response
@@ -32,8 +32,8 @@ data = pd.DataFrame()
 num_rows = 5
 
 # Auth details for GS
-client_id = '64019d2ee21e4a04b6722c5ee4f3bd7d'
-client_secret = '2d4b5d81d3b7b114f90cf0462bedc581c119242a53240afbb080b09fd3bd1f40'
+client_id = 'CLIENT ID HERE'
+client_secret = 'CLIENT SECRET HERE'
 
 
 
